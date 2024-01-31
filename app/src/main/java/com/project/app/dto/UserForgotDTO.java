@@ -10,19 +10,8 @@ import lombok.*;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class UserRegisterDTO extends UserBase {
-
+public class UserForgotDTO extends UserBase {
     @NotBlank(message = "Name is required")
     @Email(message = "Invalid email format")
     private String name;
-
-    @NotBlank(message = "Password is required")
-    private String password;
-
-    @NotBlank(message = "Password is required")
-    private String re_password;
-
-    public boolean checkRePassword(){
-        return password.equals(re_password);
-    }
 }

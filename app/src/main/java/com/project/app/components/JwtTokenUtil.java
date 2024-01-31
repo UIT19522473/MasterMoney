@@ -30,6 +30,9 @@ public class JwtTokenUtil {
     @Value("${jwt.expirationRegister}")
     private int expirationRegister; //save to environment
 
+    @Value("${jwt.expirationForgot}")
+    private int expirationForgot; //save to environment
+
     @Value("${jwt.secretKey}")
     private String secretKey;
 
@@ -39,6 +42,9 @@ public class JwtTokenUtil {
 
     public String generateTokenRegister(UserBase user) {
         return createToken(user,expirationRegister);
+    }
+    public String generateTokenForgot(UserBase user) {
+        return createToken(user,expirationForgot);
     }
 
     private String createToken(UserBase user, int expirationTime) {
@@ -82,7 +88,8 @@ public class JwtTokenUtil {
     //    check expiration token
     public boolean isTokenExpired(String token) {
         Date expirationDate = this.extractClaim(token, Claims::getExpiration);
-        return expirationDate.before(new Date());
+        Date now = new Date();
+        return expirationDate.before(now);
     }
 
     public boolean validatedToken(String token, UserDetails userDetails) {
