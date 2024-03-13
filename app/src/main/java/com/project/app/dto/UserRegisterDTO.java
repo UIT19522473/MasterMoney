@@ -13,8 +13,11 @@ import lombok.*;
 public class UserRegisterDTO extends UserBase {
 
     @NotBlank(message = "Name is required")
-    @Email(message = "Invalid email format")
     private String name;
+
+    @NotBlank(message = "Name is required")
+    @Email(message = "Invalid email format")
+    private String email;
 
     @NotBlank(message = "Password is required")
     private String password;

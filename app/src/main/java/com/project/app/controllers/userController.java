@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@CrossOrigin(origins = "*") // Đặt "*" để cho phép từ tất cả các origin
 @RestController
 @RequestMapping("api/v1/users")
 @RequiredArgsConstructor
@@ -146,6 +147,11 @@ public class userController {
                     .data("")
                     .build());
         }
-
     }
+
+    @GetMapping("/test")
+    public ResponseEntity<?> testApi(){
+        return ResponseEntity.ok("test oke");
+    }
+
 }

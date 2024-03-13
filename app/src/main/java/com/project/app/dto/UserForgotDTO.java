@@ -11,7 +11,7 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 public class UserForgotDTO extends UserBase {
-    @NotBlank(message = "Name is required")
+    @NotBlank(message = "Email is required")
     @Email(message = "Invalid email format")
-    private String name;
+    private String email;
 }

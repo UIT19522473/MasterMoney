@@ -26,15 +26,7 @@ public class SecurityConfig {
 
     @Bean
     public UserDetailsService userDetailsService() {
-//        return name -> userRepository.findUsersByName(name).orElseThrow(()-> ThrowException.builder()
-//                .commonResponse(CommonResponse.builder()
-//                        .status(HttpServletResponse.SC_FORBIDDEN)
-//                        .message("Cannot find user by name: "+ name)
-//                        .data("")
-//                        .build())
-//                .build());
-
-        return name -> userRepository.findUsersByName(name).orElseThrow(()-> new RuntimeException("Cannot find user"));
+        return email -> userRepository.findUsersByEmail(email).orElseThrow(()-> new RuntimeException("Cannot find user"));
     }
 
     @Bean

@@ -13,6 +13,7 @@ import com.project.app.repositories.ITokenRegisterRepository;
 import com.project.app.repositories.IUserForgotRepository;
 import com.project.app.repositories.IUserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -34,15 +35,19 @@ public class UserService implements IUserService {
     private final PasswordEncoder passwordEncoder;
 
     private final AuthenticationManager authenticationManager;
+//    private final UserDetailsService userDetailsService;
 
     private final EmailService emailService;
+
+    @Value("${client.url}")
+    private String urlClient;
 
     @Override
     public String createUserWithToken(UserRegisterDTO userRegisterDTO) {
 
 //        check user is existing in database -> If it is already register -> does not create user
-        Optional<User> existingUser = iUserRepository.findUsersByName(userRegisterDTO.getName());
-        if (existingUser.isPresent()) throw new RuntimeException("User is already register");
+        Optional<User> existingEmail = iUserRepository.findUsersByEmail(userRegisterDTO.getEmail());
+        if (existingEmail.isPresent()) throw new RuntimeException("User is already register");
 
 //        check password and retype password are matched. If match, process will continue
         if (!userRegisterDTO.checkRePassword()) throw new RuntimeException("Re-Password is incorrect");
@@ -51,7 +56,7 @@ public class UserService implements IUserService {
         String tokenRegister = jwtTokenUtil.generateTokenRegister(userRegisterDTO);
 
 //        check token register is existing in database. If it has been exist -> update token, else create new token register in database
-        Optional<TokenRegister> existingTokenRegister = iTokenRegisterRepository.findTokenRegisterByUserName(userRegisterDTO.getName());
+        Optional<TokenRegister> existingTokenRegister = iTokenRegisterRepository.findTokenRegisterByEmail(userRegisterDTO.getEmail());
 
 //        If it has been exist -> update token
         if (existingTokenRegister.isPresent()) {
@@ -62,27 +67,29 @@ public class UserService implements IUserService {
         } else {
             String encodedPassword = passwordEncoder.encode(userRegisterDTO.getPassword());
             iTokenRegisterRepository.save(TokenRegister.builder()
-                    .userName(userRegisterDTO.getName())
+                    .name(userRegisterDTO.getName())
+                    .email(userRegisterDTO.getEmail())
                     .password(encodedPassword)
                     .token(tokenRegister)
                     .build());
         }
 
 //        send email to user, which is used to register
-        String subjectEmail = "Please click this link to complete registration: http://localhost:5000/api/v1/users/confirm-register?token=" + tokenRegister;
-//        emailService.sendEmail(userRegisterDTO.getName(),"Confirm Register Account",subjectEmail);
-        emailService.sendEmail(userRegisterDTO.getName(), "Confirm Register Account", subjectEmail);
+        String urlConfirmRegister = urlClient + "/confirm-register?token=" + tokenRegister;
+        String subjectEmail = "Please click this link to complete registration: " + urlConfirmRegister;
+//        emailService.sendEmail(userRegisterDTO.getEmail(),"Confirm Register Account",subjectEmail);
+        emailService.sendEmail(userRegisterDTO.getEmail(), "Confirm Register Account", subjectEmail);
         return tokenRegister;
     }
 
     @Override
     public boolean confirmRegister(String token) {
 
-        String exactUserName = jwtTokenUtil.exactUserName(token);
+        String exactEmail = jwtTokenUtil.exactEmail(token);
 
-        Optional<TokenRegister> existingTokenRegister = iTokenRegisterRepository.findTokenRegisterByUserName(exactUserName);
+        Optional<TokenRegister> existingTokenRegister = iTokenRegisterRepository.findTokenRegisterByEmail(exactEmail);
         if (existingTokenRegister.isPresent() && jwtTokenUtil.validatedTokenRegister(token, existingTokenRegister.get())) {
-            Optional<User> existingUser = iUserRepository.findUsersByName(exactUserName);
+            Optional<User> existingUser = iUserRepository.findUsersByEmail(exactEmail);
             if (existingUser.isPresent() && token.equals(existingTokenRegister.get().getToken())) {
 //                if find username has been register -> remove it from table register_token
                 iTokenRegisterRepository.delete(existingTokenRegister.get());
@@ -98,10 +105,10 @@ public class UserService implements IUserService {
                 }
 
 //                save account change password
-                String encodedPassword = passwordEncoder.encode(existingTokenRegister.get().getPassword());
                 iUserRepository.save(User.builder()
-                        .name(exactUserName)
-                        .password(encodedPassword)
+                        .name(existingTokenRegister.get().getName())
+                        .email(exactEmail)
+                        .password(existingTokenRegister.get().getPassword())
                         .role(existingRole.get())
                         .build());
 
@@ -116,24 +123,25 @@ public class UserService implements IUserService {
     @Override
     public String loginUser(UserDTO userDTO) {
 
-        Optional<User> optionalUser = iUserRepository.findUsersByName(userDTO.getName());
+        Optional<User> optionalUser = iUserRepository.findUsersByEmail(userDTO.getEmail());
         if (optionalUser.isEmpty()) {
             throw new RuntimeException("Invalid user name / password");
         }
 
         User existingUser = optionalUser.get();
 
-        UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(userDTO.getName(), userDTO.getPassword(), existingUser.getAuthorities());
+        UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(userDTO.getEmail(), userDTO.getPassword(), existingUser.getAuthorities());
 
         authenticationManager.authenticate(authenticationToken);
+
         return jwtTokenUtil.generateToken(existingUser);
     }
 
     @Override
     public String createUserForgotToken(UserForgotDTO userForgotDTO) {
-        Optional<User> existingUser = iUserRepository.findUsersByName(userForgotDTO.getName());
+        Optional<User> existingUser = iUserRepository.findUsersByEmail(userForgotDTO.getEmail());
         if (existingUser.isEmpty())
-            throw new RuntimeException("Cannot find user with name: " + userForgotDTO.getName());
+            throw new RuntimeException("Cannot find user with email: " + userForgotDTO.getEmail());
 
         String tokenForgot = jwtTokenUtil.generateTokenForgot(userForgotDTO);
 
@@ -148,23 +156,27 @@ public class UserService implements IUserService {
                     .userId(existingUser.get())
                     .build());
         }
-        String subjectEmail = "Please click this link to complete change password: http://localhost:5000/api/v1/users/change-password?token=" + tokenForgot;
-//        emailService.sendEmail(userRegisterDTO.getName(),"Confirm Register Account",subjectEmail);
-        emailService.sendEmail(userForgotDTO.getName(), "Confirm Change Password", subjectEmail);
+        String urlChangePassword = urlClient + "/change-password?token=" + tokenForgot;
+        String subjectEmail = "Please click this link to complete change password: " + urlChangePassword;
+//        emailService.sendEmail(userRegisterDTO.getEmail(),"Confirm Register Account",subjectEmail);
+        emailService.sendEmail(userForgotDTO.getEmail(), "Confirm Change Password", subjectEmail);
         return tokenForgot;
     }
 
     @Override
     public boolean changePassword(String token, String password, String rePassword) {
-        String exactUserName = jwtTokenUtil.exactUserName(token);
+        String exactEmail = jwtTokenUtil.exactEmail(token);
 
-        Optional<User> existingUser = iUserRepository.findUsersByName(exactUserName);
+        Optional<User> existingUser = iUserRepository.findUsersByEmail(exactEmail);
         if (existingUser.isPresent() && jwtTokenUtil.validatedToken(token, existingUser.get())) {
             Optional<UserForgot> existingUserForgot = iUserForgotRepository.findUserForgotByUserId_Id(existingUser.get().getId());
             if (existingUserForgot.isPresent() && token.equals(existingUserForgot.get().getToken())) {
 //                if find username has been forgot password -> remove it from table users_forgot
                 if (password.equals(rePassword)) {
-                    existingUser.get().setPassword(password);
+
+                    String encodedPassword = passwordEncoder.encode(password);
+
+                    existingUser.get().setPassword(encodedPassword);
                     iUserRepository.save(existingUser.get());
                     iUserForgotRepository.delete(existingUserForgot.get());
                     return true;

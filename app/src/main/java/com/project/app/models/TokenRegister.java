@@ -15,7 +15,7 @@ public class TokenRegister {
     private Long id;
     private String token;
 
-    @Column(name = "user_name")
-    private String userName;
+    private String name;
+    private String email;
     private String password;
 }

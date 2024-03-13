@@ -11,7 +11,7 @@ import lombok.*;
 public class TokenRegisterDTO {
     private String token;
 
-    @JsonProperty(value = "user_name")
-    private String userName;
+    private String name;
+    private String email;
     private String password;
 }

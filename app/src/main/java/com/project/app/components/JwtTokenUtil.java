@@ -49,11 +49,12 @@ public class JwtTokenUtil {
 
     private String createToken(UserBase user, int expirationTime) {
         Map<String, Object> claims = new HashMap<>();
-        claims.put("name", user.getName());
+        claims.put("email", user.getEmail());
+//        claims.put("name", user.getEmail());
         try {
             String token = Jwts.builder()
                     .setClaims(claims)
-                    .setSubject(user.getName())
+                    .setSubject(user.getEmail())
                     .setExpiration(new Date(System.currentTimeMillis() + expirationTime * 1000L))
                     .signWith(getSignInKey(), SignatureAlgorithm.HS256)
                     .compact();
@@ -81,7 +82,7 @@ public class JwtTokenUtil {
         return claimsTFunction.apply(claims);
     }
 
-    public String exactUserName(String token) {
+    public String exactEmail(String token) {
         return extractClaim(token, Claims::getSubject);
     }
 
@@ -93,12 +94,12 @@ public class JwtTokenUtil {
     }
 
     public boolean validatedToken(String token, UserDetails userDetails) {
-        String userName = exactUserName(token);
-        return (userName.equals(userDetails.getUsername()) && !isTokenExpired(token));
+        String email = exactEmail(token);
+        return (email.equals(userDetails.getUsername()) && !isTokenExpired(token));
     }
 
     public boolean validatedTokenRegister(String token, TokenRegister tokenRegister) {
-        String userName = exactUserName(token);
-        return (userName.equals(tokenRegister.getUserName()) && !isTokenExpired(token));
+        String email = exactEmail(token);
+        return (email.equals(tokenRegister.getEmail()) && !isTokenExpired(token));
     }
 }
